@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Precios de Productos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for Inter font and general layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for better content flow */
+            min-height: 100vh; /* Full viewport height */
+            padding: 2rem; /* Padding around the whole app */
+        }
+        .container {
+            background-color: #ffffff; /* White background for the card */
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            padding: 2.5rem; /* Ample padding inside the card */
+            max-width: 900px; /* Max width for larger screens */
+            width: 100%; /* Full width on smaller screens */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Spacing between sections */
+        }
+        input[type="text"], input[type="file"], input[type="password"] {
+            border: 1px solid #d1d5db; /* Light gray border */
+            border-radius: 0.5rem; /* Rounded corners */
+            padding: 0.75rem 1rem; /* Padding inside inputs */
+            font-size: 1rem;
+            width: 100%; /* Full width */
+        }
+        button {
+            background-color: #4f46e5; /* Indigo 600 */
+            color: #ffffff; /* White text */
+            padding: 0.75rem 1.5rem; /* Padding inside button */
+            border-radius: 0.5rem; /* Rounded corners */
+            font-weight: 600; /* Semi-bold */
+            transition: background-color 0.2s ease-in-out; /* Smooth transition */
+            cursor: pointer;
+            width: 100%; /* Full width */
+        }
+        button:hover {
+            background-color: #4338ca; /* Indigo 700 on hover */
+        }
+        .message-box {
+            background-color: #fefcbf; /* Light yellow background */
+            border: 1px solid #fcd34d; /* Yellow border */
+            color: #92400e; /* Dark brown text */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            display: none; /* Hidden by default */
+        }
+        .message-box.show {
+            display: block; /* Show when 'show' class is added */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-gray-800 text-center mb-4">Buscador de Precios de Productos</h1>
+
+        <!-- Sección de Acceso de Administrador -->
+        <div class="p-6 bg-gray-50 rounded-lg" id="adminAccessSection">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Acceso de Administrador</h2>
+            <p class="text-gray-600 mb-4">
+                Ingresa la contraseña para acceder a la sección de carga de archivos.
+            </p>
+            <input type="password" id="adminPasswordInput" placeholder="Contraseña de administrador" class="focus:ring-indigo-500 focus:border-indigo-500 mb-4">
+            <button id="adminAccessButton">Acceder</button>
+            <p id="adminMessage" class="text-sm text-red-500 mt-2"></p>
+        </div>
+
+        <!-- Sección de Carga de Archivo (Oculta por defecto) -->
+        <div class="p-6 bg-gray-50 rounded-lg hidden" id="uploadSection">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">1. Cargar Archivo CSV</h2>
+            <p class="text-gray-600 mb-4">
+                Por favor, convierte tu archivo Excel a formato CSV y cárgalo aquí.
+                Asegúrate de que las columnas se llamen exactamente:
+                <code class="font-mono bg-gray-200 p-1 rounded">Nombre de equipo</code>,
+                <code class="font-mono bg-gray-200 p-1 rounded">Codigo sap</code>,
+                <code class="font-mono bg-gray-200 p-1 rounded">Precio de venta al sub</code>, y
+                <code class="font-mono bg-gray-200 p-1 rounded">Color</code>.
+            </p>
+            <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-indigo-50 file:text-indigo-700
+                hover:file:bg-indigo-100 cursor-pointer">
+            <p id="fileStatus" class="text-sm text-gray-500 mt-2"></p>
+        </div>
+
+        <!-- Sección de Búsqueda -->
+        <div class="p-6 bg-gray-50 rounded-lg">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">2. Buscar Producto</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="nombreEquipoInput" class="block text-sm font-medium text-gray-700 mb-1">Nombre de Equipo:</label>
+                    <input type="text" id="nombreEquipoInput" placeholder="Ej. Laptop HP EliteBook" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                <div>
+                    <label for="codigoSapInput" class="block text-sm font-medium text-gray-700 mb-1">Código SAP:</label>
+                    <input type="text" id="codigoSapInput" placeholder="Ej. 123456789" class="focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+            </div>
+            <button id="searchButton" class="mt-4">Buscar Precio</button>
+        </div>
+
+        <!-- Sección de Resultados -->
+        <div class="p-6 bg-gray-50 rounded-lg">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">3. Resultado</h2>
+            <div id="resultsContainer" class="bg-white p-4 rounded-md border border-gray-200 min-h-[80px] flex items-center justify-center text-gray-500">
+                <p>Los resultados aparecerán aquí.</p>
+            </div>
+            <div id="messageBox" class="message-box"></div>
+        </div>
+    </div>
+
+    <script>
+        let productsData = []; // This will store the parsed CSV data
+        const ADMIN_PASSWORD = "tu_contraseña_secreta"; // <<< CAMBIA ESTO POR TU CONTRASEÑA REAL
+
+        const csvFileInput = document.getElementById('csvFileInput');
+        const nombreEquipoInput = document.getElementById('nombreEquipoInput');
+        const codigoSapInput = document.getElementById('codigoSapInput');
+        const searchButton = document.getElementById('searchButton');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const fileStatus = document.getElementById('fileStatus');
+        const messageBox = document.getElementById('messageBox');
+
+        const adminAccessSection = document.getElementById('adminAccessSection');
+        const adminPasswordInput = document.getElementById('adminPasswordInput');
+        const adminAccessButton = document.getElementById('adminAccessButton');
+        const adminMessage = document.getElementById('adminMessage');
+        const uploadSection = document.getElementById('uploadSection');
+
+        // Function to show a message in the message box
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.className = 'message-box show'; // Reset classes and show
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
+            } else if (type === 'success') {
+                messageBox.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+            } else { // info
+                messageBox.classList.add('bg-yellow-100', 'border-yellow-400', 'text-yellow-700');
+            }
+        }
+
+        // Function to hide the message box
+        function hideMessageBox() {
+            messageBox.classList.remove('show', 'bg-red-100', 'border-red-400', 'text-red-700', 'bg-green-100', 'border-green-400', 'text-green-700', 'bg-yellow-100', 'border-yellow-400', 'text-yellow-700');
+            messageBox.textContent = '';
+        }
+
+        // Function to determine the delimiter (comma or semicolon)
+        function detectDelimiter(text) {
+            const commaCount = (text.match(/,/g) || []).length;
+            const semicolonCount = (text.match(/;/g) || []).length;
+            return semicolonCount > commaCount ? ';' : ',';
+        }
+
+        // Function to parse CSV text into an array of objects, handling quoted fields
+        function parseCSV(csvText) {
+            const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== ''); // Split by newline, remove empty lines
+            if (lines.length === 0) {
+                console.log('CSV parser: No se encontraron líneas válidas después de filtrar vacías.');
+                return [];
+            }
+
+            // Detect delimiter based on the first line
+            const delimiter = detectDelimiter(lines[0]);
+            console.log(`CSV parser: Delimitador detectado: '${delimiter}'`);
+
+            // Regex for splitting CSV lines.
+            // This regex splits on the delimiter ONLY if it's NOT inside double quotes.
+            // It uses a positive lookahead to ensure the delimiter is followed by an even number of quotes
+            // until the end of the line, which indicates it's outside a quoted field.
+            const splitRegex = new RegExp(`${delimiter}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
+
+            const headers = [];
+            const headerLine = lines[0];
+            const rawHeaders = headerLine.split(splitRegex);
+
+            rawHeaders.forEach(h => {
+                let cleanedHeader = h.trim();
+                // Remove surrounding quotes and unescape internal quotes ("" becomes ")
+                if (cleanedHeader.startsWith('"') && cleanedHeader.endsWith('"')) {
+                    cleanedHeader = cleanedHeader.substring(1, cleanedHeader.length - 1).replace(/""/g, '"');
+                }
+                headers.push(cleanedHeader);
+            });
+
+            console.log('CSV parser: Cabeceras detectadas:', headers);
+
+            const data = [];
+            let skippedRows = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                const currentLine = lines[i];
+                const rawValues = currentLine.split(splitRegex);
+                const values = [];
+
+                rawValues.forEach(v => {
+                    let cleanedValue = v.trim();
+                    // Remove surrounding quotes and unescape internal quotes ("" becomes ")
+                    if (cleanedValue.startsWith('"') && cleanedValue.endsWith('"')) {
+                        cleanedValue = cleanedValue.substring(1, cleanedValue.length - 1).replace(/""/g, '"');
+                    }
+                    values.push(cleanedValue);
+                });
+
+                // Ensure the number of values matches the number of headers
+                if (values.length === headers.length) {
+                    let row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+                    data.push(row);
+                } else {
+                    skippedRows++;
+                    console.warn(`CSV parser: Saltando fila mal formada ${i + 1}. Número de valores (${values.length}) no coincide con el número de cabeceras (${headers.length}). Fila original: "${currentLine}"`);
+                    console.warn(`CSV parser: Valores parseados para la fila ${i + 1}:`, values);
+                }
+            }
+            if (skippedRows > 0) {
+                showMessage(`Advertencia: Se saltaron ${skippedRows} filas debido a un posible formato incorrecto. Revisa la consola del navegador para más detalles.`, 'warning');
+            }
+            console.log('CSV parser: Datos cargados:', data);
+            return data;
+        }
+
+        // Event listener for admin access button click
+        adminAccessButton.addEventListener('click', () => {
+            const enteredPassword = adminPasswordInput.value;
+            if (enteredPassword === ADMIN_PASSWORD) {
+                adminAccessSection.classList.add('hidden'); // Hide password section
+                uploadSection.classList.remove('hidden');    // Show upload section
+                adminMessage.textContent = ''; // Clear any previous message
+                showMessage('Acceso de administrador concedido. Ahora puedes cargar el archivo CSV.', 'success');
+            } else {
+                adminMessage.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+                showMessage('Contraseña incorrecta.', 'error');
+            }
+            adminPasswordInput.value = ''; // Clear password input
+        });
+
+        // Event listener for file input change
+        csvFileInput.addEventListener('change', (event) => {
+            hideMessageBox();
+            const file = event.target.files[0];
+            if (!file) {
+                fileStatus.textContent = 'Ningún archivo seleccionado.';
+                productsData = [];
+                return;
+            }
+
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                showMessage('Por favor, selecciona un archivo CSV válido (.csv).', 'error');
+                fileStatus.textContent = 'Tipo de archivo no válido.';
+                productsData = [];
+                return;
+            }
+
+            fileStatus.textContent = `Cargando: ${file.name} (${(file.size / 1024).toFixed(2)} KB)...`;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csvText = e.target.result;
+                    productsData = parseCSV(csvText);
+
+                    // Basic validation for required columns
+                    const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color"];
+                    const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
+                    const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
+
+                    if (missingColumns.length > 0) {
+                        showMessage(`Error: Faltan las siguientes columnas en el archivo CSV: ${missingColumns.join(', ')}. Por favor, verifica los nombres de las columnas.`, 'error');
+                        fileStatus.textContent = 'Archivo CSV cargado, pero faltan columnas clave.';
+                        productsData = []; // Clear data if columns are missing
+                    } else if (productsData.length > 0) {
+                        fileStatus.textContent = `Archivo "${file.name}" cargado exitosamente. ${productsData.length} productos encontrados.`;
+                        showMessage('Archivo CSV cargado exitosamente. Ahora puedes buscar productos.', 'success');
+                    } else {
+                        fileStatus.textContent = 'Archivo CSV cargado, pero no se encontraron datos válidos.';
+                        showMessage('El archivo CSV está vacío o no contiene datos válidos.', 'error');
+                    }
+
+                } catch (error) {
+                    showMessage('Error al procesar el archivo CSV. Asegúrate de que sea un archivo CSV bien formateado.', 'error');
+                    fileStatus.textContent = 'Error al leer el archivo.';
+                    productsData = [];
+                    console.error('Error parsing CSV:', error);
+                }
+            };
+            reader.onerror = () => {
+                showMessage('Error al leer el archivo. Inténtalo de nuevo.', 'error');
+                fileStatus.textContent = 'Error al leer el archivo.';
+                productsData = [];
+            };
+            reader.readAsText(file);
+        });
+
+        // Event listener for search button click
+        searchButton.addEventListener('click', () => {
+            hideMessageBox();
+            if (productsData.length === 0) {
+                resultsContainer.innerHTML = '<p class="text-gray-500">Por favor, carga un archivo CSV primero (si tienes acceso).</p>';
+                showMessage('Por favor, carga un archivo CSV antes de buscar.', 'info');
+                return;
+            }
+
+            const nombreEquipoQuery = nombreEquipoInput.value.toLowerCase().trim();
+            const codigoSapQuery = codigoSapInput.value.toLowerCase().trim();
+
+            if (!nombreEquipoQuery && !codigoSapQuery) {
+                resultsContainer.innerHTML = '<p class="text-gray-500">Ingresa un "Nombre de Equipo" o un "Código SAP" para buscar.</p>';
+                showMessage('Debes ingresar al menos un criterio de búsqueda (Nombre de Equipo o Código SAP).', 'info');
+                return;
+            }
+
+            const results = productsData.filter(product => {
+                const matchNombre = nombreEquipoQuery ? product["Nombre de equipo"]?.toLowerCase().includes(nombreEquipoQuery) : true;
+                const matchCodigo = codigoSapQuery ? product["Codigo sap"]?.toLowerCase().includes(codigoSapQuery) : true;
+
+                // If both are provided, both must match
+                // If only one is provided, that one must match
+                return matchNombre && matchCodigo;
+            });
+
+            displayResults(results);
+        });
+
+        // Function to display search results
+        function displayResults(results) {
+            resultsContainer.innerHTML = ''; // Clear previous results
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<p class="text-gray-500">No se encontraron productos que coincidan con los criterios de búsqueda.</p>';
+                showMessage('No se encontraron productos con los criterios especificados.', 'info');
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            ul.className = 'list-disc list-inside space-y-2';
+
+            results.forEach(product => {
+                const originalPrice = product["Precio de venta al sub"] || 'N/A'; // Get original price directly
+
+                console.log(`Procesando producto: Nombre='${product["Nombre de equipo"]}', Código='${product["Codigo sap"]}', Precio Original='${originalPrice}'`);
+
+
+                const li = document.createElement('li');
+                li.className = 'text-gray-800';
+                li.innerHTML = `
+                    <span class="font-semibold">Nombre de Equipo:</span> ${product["Nombre de equipo"] || 'N/A'}<br>
+                    <span class="font-semibold">Código SAP:</span> ${product["Codigo sap"] || 'N/A'}<br>
+                    <span class="font-semibold">Color:</span> ${product["Color"] || 'N/A'}<br>
+                    <span class="font-semibold text-lg text-indigo-700">Precio de Venta al Sub:</span> <span class="text-lg text-indigo-700">${originalPrice}</span>
+                `;
+                ul.appendChild(li);
+            });
+            resultsContainer.appendChild(ul);
+            showMessage(`Se encontraron ${results.length} resultados.`, 'success');
+        }
+
+        // Initial state message for users without admin access
+        resultsContainer.innerHTML = '<p class="text-gray-500">Carga un archivo CSV para empezar (se requiere acceso de administrador).</p>';
+    </script>
+</body>
+</html>
