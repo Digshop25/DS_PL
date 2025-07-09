@@ -60,6 +60,25 @@
         .message-box.show {
             display: block; /* Show when 'show' class is added */
         }
+        /* Table specific styles */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .results-table th, .results-table td {
+            border: 1px solid #e5e7eb; /* Light gray border for table cells */
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .results-table th {
+            background-color: #f9fafb; /* Lighter background for headers */
+            font-weight: 600;
+            color: #4b5563; /* Darker gray text for headers */
+        }
+        .results-table tr:nth-child(even) {
+            background-color: #f9fafb; /* Zebra striping for rows */
+        }
     </style>
 </head>
 <body>
@@ -99,6 +118,7 @@
                     <label for="codigoSapInput" class="block text-sm font-medium text-gray-700 mb-1">Código SAP:</label>
                     <input type="text" id="codigoSapInput" placeholder="Ej. 123456789" class="focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
+                <!-- Removed Marca and Modelo input fields -->
             </div>
             <button id="searchButton" class="mt-4">Buscar Precio</button>
         </div>
@@ -120,12 +140,12 @@
 
     <script>
         let productsData = []; // This will store the parsed CSV data
-        // Updated CSV file name as per user's request
         const CSV_FILE_NAME = 'Buscador lista de precios.csv'; // Nombre del archivo CSV a cargar automáticamente
 
         const csvFileInput = document.getElementById('csvFileInput');
         const nombreEquipoInput = document.getElementById('nombreEquipoInput');
         const codigoSapInput = document.getElementById('codigoSapInput');
+        // Removed Marca and Modelo input references
         const searchButton = document.getElementById('searchButton');
         const resultsContainer = document.getElementById('resultsContainer');
         const fileStatus = document.getElementById('fileStatus');
@@ -234,8 +254,6 @@
             fileStatus.textContent = `Intentando cargar "${CSV_FILE_NAME}" automáticamente...`;
             try {
                 // Construct the full URL for the CSV file using the base URL of the GitHub Pages project
-                // For a project page like https://digshop25.github.io/DS_PL/
-                // the base URL for fetching assets in the same repo should be relative to the root of the project.
                 const fullCsvUrl = new URL(CSV_FILE_NAME, window.location.href).href;
 
                 console.log(`Intentando cargar CSV desde: ${fullCsvUrl}`); // Log the full URL for debugging
@@ -247,6 +265,7 @@
                 const csvText = await response.text();
                 productsData = parseCSV(csvText);
 
+                // Reverted required columns to original set (without Marca, Modelo)
                 const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color"];
                 const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
                 const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
@@ -295,7 +314,7 @@
                     const csvText = e.target.result;
                     productsData = parseCSV(csvText);
 
-                    // Basic validation for required columns
+                    // Reverted required columns to original set (without Marca, Modelo)
                     const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color"];
                     const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
                     const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
@@ -338,26 +357,28 @@
 
             const nombreEquipoQuery = nombreEquipoInput.value.toLowerCase().trim();
             const codigoSapQuery = codigoSapInput.value.toLowerCase().trim();
+            // Removed Marca and Modelo queries
 
-            if (!nombreEquipoQuery && !codigoSapQuery) {
-                resultsContainer.innerHTML = '<p class="text-gray-500">Ingresa un "Nombre de Equipo" o un "Código SAP" para buscar.</p>';
-                showMessage('Debes ingresar al menos un criterio de búsqueda (Nombre de Equipo o Código SAP).', 'info');
+            // Check if at least one search criterion is provided
+            if (!nombreEquipoQuery && !codigoSapQuery) { // Only check original two inputs
+                resultsContainer.innerHTML = '<p class="text-gray-500">Ingresa al menos un criterio de búsqueda (Nombre de Equipo o Código SAP).</p>';
+                showMessage('Debes ingresar al menos un criterio de búsqueda.', 'info');
                 return;
             }
 
             const results = productsData.filter(product => {
                 const matchNombre = nombreEquipoQuery ? product["Nombre de equipo"]?.toLowerCase().includes(nombreEquipoQuery) : true;
                 const matchCodigo = codigoSapQuery ? product["Codigo sap"]?.toLowerCase().includes(codigoSapQuery) : true;
+                // Removed Marca and Modelo matching
 
-                // If both are provided, both must match
-                // If only one is provided, that one must match
-                return matchNombre && matchCodigo;
+                // All provided criteria must match
+                return matchNombre && matchCodigo; // Only original two criteria
             });
 
             displayResults(results);
         });
 
-        // Function to display search results
+        // Function to display search results in a table
         function displayResults(results) {
             resultsContainer.innerHTML = ''; // Clear previous results
 
@@ -367,26 +388,36 @@
                 return;
             }
 
-            const ul = document.createElement('ul');
-            ul.className = 'list-disc list-inside space-y-2';
+            const table = document.createElement('table');
+            table.className = 'results-table';
 
-            results.forEach(product => {
-                const originalPrice = product["Precio de venta al sub"] || 'N/A'; // Get original price directly
-
-                console.log(`Procesando producto: Nombre='${product["Nombre de equipo"]}', Código='${product["Codigo sap"]}', Precio Original='${originalPrice}'`);
-
-
-                const li = document.createElement('li');
-                li.className = 'text-gray-800';
-                li.innerHTML = `
-                    <span class="font-semibold">Nombre de Equipo:</span> ${product["Nombre de equipo"] || 'N/A'}<br>
-                    <span class="font-semibold">Código SAP:</span> ${product["Codigo sap"] || 'N/A'}<br>
-                    <span class="font-semibold">Color:</span> ${product["Color"] || 'N/A'}<br>
-                    <span class="font-semibold text-lg text-indigo-700">Precio de Venta al Sub:</span> <span class="text-lg text-indigo-700">${originalPrice}</span>
-                `;
-                ul.appendChild(li);
+            // Create table header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            // Reverted table headers to original set
+            ['Nombre de equipo', 'Codigo sap', 'Color', 'Precio de venta al sub'].forEach(text => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                headerRow.appendChild(th);
             });
-            resultsContainer.appendChild(ul);
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // Create table body
+            const tbody = document.createElement('tbody');
+            results.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product["Nombre de equipo"] || 'N/A'}</td>
+                    <td>${product["Codigo sap"] || 'N/A'}</td>
+                    <td>${product["Color"] || 'N/A'}</td>
+                    <td class="font-semibold text-indigo-700">${product["Precio de venta al sub"] || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            resultsContainer.appendChild(table);
+
             showMessage(`Se encontraron ${results.length} resultados.`, 'success');
         }
 
@@ -409,3 +440,4 @@
     </script>
 </body>
 </html>
+
