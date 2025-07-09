@@ -28,7 +28,7 @@
             flex-direction: column;
             gap: 1.5rem; /* Spacing between sections */
         }
-        input[type="text"], input[type="file"], input[type="password"] {
+        input[type="text"], input[type="file"] { /* Removed input[type="password"] as it's no longer needed */
             border: 1px solid #d1d5db; /* Light gray border */
             border-radius: 0.5rem; /* Rounded corners */
             padding: 0.75rem 1rem; /* Padding inside inputs */
@@ -66,22 +66,12 @@
     <div class="container">
         <h1 class="text-3xl font-bold text-gray-800 text-center mb-4">Buscador de Precios de Productos</h1>
 
-        <!-- Sección de Acceso de Administrador -->
-        <div class="p-6 bg-gray-50 rounded-lg" id="adminAccessSection">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">Acceso de Administrador</h2>
-            <p class="text-gray-600 mb-4">
-                Ingresa la contraseña para acceder a la sección de carga de archivos.
-            </p>
-            <input type="password" id="adminPasswordInput" placeholder="Contraseña de administrador" class="focus:ring-indigo-500 focus:border-indigo-500 mb-4">
-            <button id="adminAccessButton">Acceder</button>
-            <p id="adminMessage" class="text-sm text-red-500 mt-2"></p>
-        </div>
-
-        <!-- Sección de Carga de Archivo (Oculta por defecto) -->
-        <div class="p-6 bg-gray-50 rounded-lg hidden" id="uploadSection">
+        <!-- Sección de Carga de Archivo (Visible por defecto, con carga automática) -->
+        <div class="p-6 bg-gray-50 rounded-lg" id="uploadSection">
             <h2 class="text-xl font-semibold text-gray-700 mb-4">1. Cargar Archivo CSV</h2>
             <p class="text-gray-600 mb-4">
-                Por favor, convierte tu archivo Excel a formato CSV y cárgalo aquí.
+                La aplicación intentará cargar automáticamente el archivo <code class="font-mono bg-gray-200 p-1 rounded">Buscador lista de precios.csv</code> desde este sitio.
+                Si necesitas cargar un archivo diferente o actualizar los datos localmente, puedes usar la opción de abajo.
                 Asegúrate de que las columnas se llamen exactamente:
                 <code class="font-mono bg-gray-200 p-1 rounded">Nombre de equipo</code>,
                 <code class="font-mono bg-gray-200 p-1 rounded">Codigo sap</code>,
@@ -125,7 +115,8 @@
 
     <script>
         let productsData = []; // This will store the parsed CSV data
-        const ADMIN_PASSWORD = "tu_contraseña_secreta"; // <<< CAMBIA ESTO POR TU CONTRASEÑA REAL
+        // Updated CSV file name as per user's request
+        const CSV_FILE_NAME = 'Buscador lista de precios.csv'; // Nombre del archivo CSV a cargar automáticamente
 
         const csvFileInput = document.getElementById('csvFileInput');
         const nombreEquipoInput = document.getElementById('nombreEquipoInput');
@@ -134,12 +125,6 @@
         const resultsContainer = document.getElementById('resultsContainer');
         const fileStatus = document.getElementById('fileStatus');
         const messageBox = document.getElementById('messageBox');
-
-        const adminAccessSection = document.getElementById('adminAccessSection');
-        const adminPasswordInput = document.getElementById('adminPasswordInput');
-        const adminAccessButton = document.getElementById('adminAccessButton');
-        const adminMessage = document.getElementById('adminMessage');
-        const uploadSection = document.getElementById('uploadSection');
 
         // Function to show a message in the message box
         function showMessage(message, type = 'info') {
@@ -237,22 +222,51 @@
             return data;
         }
 
-        // Event listener for admin access button click
-        adminAccessButton.addEventListener('click', () => {
-            const enteredPassword = adminPasswordInput.value;
-            if (enteredPassword === ADMIN_PASSWORD) {
-                adminAccessSection.classList.add('hidden'); // Hide password section
-                uploadSection.classList.remove('hidden');    // Show upload section
-                adminMessage.textContent = ''; // Clear any previous message
-                showMessage('Acceso de administrador concedido. Ahora puedes cargar el archivo CSV.', 'success');
-            } else {
-                adminMessage.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
-                showMessage('Contraseña incorrecta.', 'error');
-            }
-            adminPasswordInput.value = ''; // Clear password input
-        });
+        // Function to automatically load the CSV from the server
+        async function loadCsvFromServer() {
+            fileStatus.textContent = `Intentando cargar "${CSV_FILE_NAME}" automáticamente...`;
+            try {
+                // Construct the full URL for the CSV file using the base URL of the GitHub Pages project
+                // For a project page like https://digshop25.github.io/DS_PL/
+                // the base URL for fetching assets in the same repo should be relative to the root of the project.
+                // window.location.origin gives "https://digshop25.github.io"
+                // window.location.pathname gives "/DS_PL/"
+                // So, the full URL for the CSV should be "https://digshop25.github.io/DS_PL/Buscador lista de precios.csv"
+                const fullCsvUrl = new URL(CSV_FILE_NAME, window.location.href).href;
 
-        // Event listener for file input change
+                console.log(`Intentando cargar CSV desde: ${fullCsvUrl}`); // Log the full URL for debugging
+
+                const response = await fetch(fullCsvUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+                }
+                const csvText = await response.text();
+                productsData = parseCSV(csvText);
+
+                const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color"];
+                const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
+                const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
+
+                if (missingColumns.length > 0) {
+                    showMessage(`Error: Faltan las siguientes columnas en el archivo CSV: ${missingColumns.join(', ')}. Por favor, verifica los nombres de las columnas en "${CSV_FILE_NAME}".`, 'error');
+                    fileStatus.textContent = `Archivo "${CSV_FILE_NAME}" cargado, pero faltan columnas clave.`;
+                    productsData = [];
+                } else if (productsData.length > 0) {
+                    fileStatus.textContent = `Archivo "${CSV_FILE_NAME}" cargado exitosamente. ${productsData.length} productos encontrados.`;
+                    showMessage('Archivo CSV cargado automáticamente. Ahora puedes buscar productos.', 'success');
+                } else {
+                    fileStatus.textContent = `Archivo "${CSV_FILE_NAME}" cargado, pero no se encontraron datos válidos.`;
+                    showMessage('El archivo CSV remoto está vacío o no contiene datos válidos.', 'error');
+                }
+            } catch (error) {
+                console.error('Error al cargar el CSV desde el servidor:', error);
+                fileStatus.textContent = `No se pudo cargar "${CSV_FILE_NAME}" automáticamente. Por favor, carga un archivo localmente.`;
+                showMessage(`Error al cargar el archivo "${CSV_FILE_NAME}" de GitHub Pages. Asegúrate de que exista y esté en la raíz del repositorio. Detalles: ${error.message}. También verifica la consola del navegador (F12 > Pestaña Network) para ver el estado de la solicitud.`, 'error');
+                productsData = [];
+            }
+        }
+
+        // Event listener for file input change (for manual local upload)
         csvFileInput.addEventListener('change', (event) => {
             hideMessageBox();
             const file = event.target.files[0];
@@ -288,9 +302,9 @@
                         productsData = []; // Clear data if columns are missing
                     } else if (productsData.length > 0) {
                         fileStatus.textContent = `Archivo "${file.name}" cargado exitosamente. ${productsData.length} productos encontrados.`;
-                        showMessage('Archivo CSV cargado exitosamente. Ahora puedes buscar productos.', 'success');
+                        showMessage('Archivo CSV local cargado exitosamente. Ahora puedes buscar productos.', 'success');
                     } else {
-                        fileStatus.textContent = 'Archivo CSV cargado, pero no se encontraron datos válidos.';
+                        fileStatus.textContent = 'Archivo CSV local cargado, pero no se encontraron datos válidos.';
                         showMessage('El archivo CSV está vacío o no contiene datos válidos.', 'error');
                     }
 
@@ -313,8 +327,8 @@
         searchButton.addEventListener('click', () => {
             hideMessageBox();
             if (productsData.length === 0) {
-                resultsContainer.innerHTML = '<p class="text-gray-500">Por favor, carga un archivo CSV primero (si tienes acceso).</p>';
-                showMessage('Por favor, carga un archivo CSV antes de buscar.', 'info');
+                resultsContainer.innerHTML = '<p class="text-gray-500">No hay datos cargados. Por favor, carga un archivo CSV.</p>';
+                showMessage('No hay datos de productos cargados. Carga un archivo CSV para buscar.', 'info');
                 return;
             }
 
@@ -372,8 +386,11 @@
             showMessage(`Se encontraron ${results.length} resultados.`, 'success');
         }
 
-        // Initial state message for users without admin access
-        resultsContainer.innerHTML = '<p class="text-gray-500">Carga un archivo CSV para empezar (se requiere acceso de administrador).</p>';
+        // Initial state message and automatic CSV load
+        document.addEventListener('DOMContentLoaded', () => {
+            resultsContainer.innerHTML = '<p class="text-gray-500">Cargando datos de productos...</p>';
+            loadCsvFromServer();
+        });
     </script>
 </body>
 </html>
