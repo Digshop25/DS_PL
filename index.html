@@ -107,7 +107,7 @@
                 <code class="font-mono bg-gray-200 p-1 rounded">Codigo sap</code>,
                 <code class="font-mono bg-gray-200 p-1 rounded">Precio de venta al sub</code>,
                 <code class="font-mono bg-gray-200 p-1 rounded">Color</code>, y
-                <code class="font-mono bg-gray-200 p-1 rounded">Precio Público (IVA incluido)</code>.
+                <code class="font-mono bg-gray-200 p-1 rounded">Precio de venta</code>.
             </p>
             <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
@@ -283,8 +283,8 @@
                 const csvText = await response.text();
                 productsData = parseCSV(csvText);
 
-                // Updated required columns to include "Precio Público (IVA incluido)"
-                const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color", "Precio Público (IVA incluido)"];
+                // Updated required columns to include "Precio de venta"
+                const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color", "Precio de venta"];
                 const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
                 const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
 
@@ -332,8 +332,8 @@
                     const csvText = e.target.result;
                     productsData = parseCSV(csvText);
 
-                    // Updated required columns to include "Precio Público (IVA incluido)"
-                    const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color", "Precio Público (IVA incluido)"];
+                    // Updated required columns to include "Precio de venta"
+                    const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color", "Precio de venta"];
                     const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
                     const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
 
@@ -407,7 +407,8 @@
             // Create table header based on login status
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
-            const headersToShow = ["Nombre de equipo", "Codigo sap", "Color", "Precio Público (IVA incluido)"];
+            // Changed "Precio Público" to "Precio de venta"
+            const headersToShow = ["Nombre de equipo", "Codigo sap", "Color", "Precio de venta"];
             if (isLoggedIn) {
                 headersToShow.splice(3, 0, "Precio de venta al sub"); // Insert "Precio de venta al sub" at index 3
             }
@@ -432,7 +433,8 @@
                 if (isLoggedIn) {
                     rowHtml += `<td>${product["Precio de venta al sub"] || 'N/A'}</td>`;
                 }
-                rowHtml += `<td class="font-semibold text-indigo-700">${product["Precio Público (IVA incluido)"] || 'N/A'}</td>`;
+                // Changed "Precio Público" to "Precio de venta"
+                rowHtml += `<td class="font-semibold text-indigo-700">${product["Precio de venta"] || 'N/A'}</td>`;
                 row.innerHTML = rowHtml;
                 tbody.appendChild(row);
             });
