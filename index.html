@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -271,8 +271,9 @@
         async function loadCsvFromServer() {
             fileStatus.textContent = `Intentando cargar "${CSV_FILE_NAME}" automáticamente...`;
             try {
-                // Construct the full URL for the CSV file using the base URL of the GitHub Pages project
-                const fullCsvUrl = new URL(CSV_FILE_NAME, window.location.href).href;
+                // Encode the CSV file name for the URL
+                const encodedCsvFileName = encodeURIComponent(CSV_FILE_NAME);
+                const fullCsvUrl = new URL(encodedCsvFileName, window.location.href).href;
 
                 console.log(`Intentando cargar CSV desde: ${fullCsvUrl}`); // Log the full URL for debugging
 
