@@ -20,7 +20,7 @@
         .container {
             background-color: #ffffff; /* White background for the card */
             border-radius: 1rem; /* Rounded corners */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 44px 6px -2px rgba(0, 0, 0, 0.05); /* Subtle shadow */
             padding: 2.5rem; /* Ample padding inside the card */
             max-width: 900px; /* Max width for larger screens */
             width: 100%; /* Full width on smaller screens */
@@ -28,7 +28,7 @@
             flex-direction: column;
             gap: 1.5rem; /* Spacing between sections */
         }
-        input[type="text"], input[type="file"] {
+        input[type="text"], input[type="file"], input[type="password"] {
             border: 1px solid #d1d5db; /* Light gray border */
             border-radius: 0.5rem; /* Rounded corners */
             padding: 0.75rem 1rem; /* Padding inside inputs */
@@ -85,6 +85,17 @@
     <div class="container">
         <h1 class="text-3xl font-bold text-gray-800 text-center mb-4">Buscador de Precios de Productos</h1>
 
+        <!-- Sección de Acceso de Administrador -->
+        <div class="p-6 bg-gray-50 rounded-lg" id="adminAccessSection">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Acceso de Administrador</h2>
+            <p class="text-gray-600 mb-4">
+                Ingresa la contraseña para visualizar todas las columnas y la opción de carga manual.
+            </p>
+            <input type="password" id="adminPasswordInput" placeholder="Contraseña de administrador" class="focus:ring-indigo-500 focus:border-indigo-500 mb-4">
+            <button id="adminAccessButton">Acceder</button>
+            <p id="adminMessage" class="text-sm text-red-500 mt-2"></p>
+        </div>
+
         <!-- Sección de Carga de Archivo (Oculta por defecto) -->
         <div class="p-6 bg-gray-50 rounded-lg hidden" id="uploadSection">
             <h2 class="text-xl font-semibold text-gray-700 mb-4">1. Cargar Archivo CSV</h2>
@@ -94,8 +105,9 @@
                 Asegúrate de que las columnas se llamen exactamente:
                 <code class="font-mono bg-gray-200 p-1 rounded">Nombre de equipo</code>,
                 <code class="font-mono bg-gray-200 p-1 rounded">Codigo sap</code>,
-                <code class="font-mono bg-gray-200 p-1 rounded">Precio de venta al sub</code>, y
-                <code class="font-mono bg-gray-200 p-1 rounded">Color</code>.
+                <code class="font-mono bg-gray-200 p-1 rounded">Precio de venta al sub</code>,
+                <code class="font-mono bg-gray-200 p-1 rounded">Color</code>, y
+                <code class="font-mono bg-gray-200 p-1 rounded">Precio Público (IVA incluido)</code>.
             </p>
             <input type="file" id="csvFileInput" accept=".csv" class="block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
@@ -118,7 +130,6 @@
                     <label for="codigoSapInput" class="block text-sm font-medium text-gray-700 mb-1">Código SAP:</label>
                     <input type="text" id="codigoSapInput" placeholder="Ej. 123456789" class="focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
-                <!-- Removed Marca and Modelo input fields -->
             </div>
             <button id="searchButton" class="mt-4">Buscar Precio</button>
         </div>
@@ -132,26 +143,33 @@
             <div id="messageBox" class="message-box"></div>
         </div>
 
-        <!-- Botón de Administrador al final de la página -->
+        <!-- Botón de Administrador al final de la página (ahora para activar el login) -->
         <div class="p-6 bg-gray-50 rounded-lg text-center">
-            <button id="adminButton" class="w-auto px-6 py-3">Administrador</button>
+            <button id="showAdminLoginButton" class="w-auto px-6 py-3">Administrador</button>
         </div>
     </div>
 
     <script>
         let productsData = []; // This will store the parsed CSV data
         const CSV_FILE_NAME = 'Buscador lista de precios.csv'; // Nombre del archivo CSV a cargar automáticamente
+        const ADMIN_PASSWORD = "@1Digital880"; // <<< CONTRASEÑA DE ADMINISTRADOR
+
+        let isLoggedIn = false; // Track login status
 
         const csvFileInput = document.getElementById('csvFileInput');
         const nombreEquipoInput = document.getElementById('nombreEquipoInput');
         const codigoSapInput = document.getElementById('codigoSapInput');
-        // Removed Marca and Modelo input references
         const searchButton = document.getElementById('searchButton');
         const resultsContainer = document.getElementById('resultsContainer');
         const fileStatus = document.getElementById('fileStatus');
         const messageBox = document.getElementById('messageBox');
-        const uploadSection = document.getElementById('uploadSection'); // Reference to the upload section
-        const adminButton = document.getElementById('adminButton'); // Reference to the admin button
+
+        const adminAccessSection = document.getElementById('adminAccessSection');
+        const adminPasswordInput = document.getElementById('adminPasswordInput');
+        const adminAccessButton = document.getElementById('adminAccessButton');
+        const adminMessage = document.getElementById('adminMessage');
+        const uploadSection = document.getElementById('uploadSection');
+        const showAdminLoginButton = document.getElementById('showAdminLoginButton'); // New button to show admin login
 
         // Function to show a message in the message box
         function showMessage(message, type = 'info') {
@@ -265,8 +283,8 @@
                 const csvText = await response.text();
                 productsData = parseCSV(csvText);
 
-                // Reverted required columns to original set (without Marca, Modelo)
-                const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color"];
+                // Updated required columns to include "Precio Público (IVA incluido)"
+                const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color", "Precio Público (IVA incluido)"];
                 const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
                 const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
 
@@ -314,8 +332,8 @@
                     const csvText = e.target.result;
                     productsData = parseCSV(csvText);
 
-                    // Reverted required columns to original set (without Marca, Modelo)
-                    const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color"];
+                    // Updated required columns to include "Precio Público (IVA incluido)"
+                    const requiredColumns = ["Nombre de equipo", "Codigo sap", "Precio de venta al sub", "Color", "Precio Público (IVA incluido)"];
                     const actualHeaders = productsData.length > 0 ? Object.keys(productsData[0]) : [];
                     const missingColumns = requiredColumns.filter(col => !actualHeaders.includes(col));
 
@@ -357,10 +375,8 @@
 
             const nombreEquipoQuery = nombreEquipoInput.value.toLowerCase().trim();
             const codigoSapQuery = codigoSapInput.value.toLowerCase().trim();
-            // Removed Marca and Modelo queries
 
-            // Check if at least one search criterion is provided
-            if (!nombreEquipoQuery && !codigoSapQuery) { // Only check original two inputs
+            if (!nombreEquipoQuery && !codigoSapQuery) {
                 resultsContainer.innerHTML = '<p class="text-gray-500">Ingresa al menos un criterio de búsqueda (Nombre de Equipo o Código SAP).</p>';
                 showMessage('Debes ingresar al menos un criterio de búsqueda.', 'info');
                 return;
@@ -369,10 +385,7 @@
             const results = productsData.filter(product => {
                 const matchNombre = nombreEquipoQuery ? product["Nombre de equipo"]?.toLowerCase().includes(nombreEquipoQuery) : true;
                 const matchCodigo = codigoSapQuery ? product["Codigo sap"]?.toLowerCase().includes(codigoSapQuery) : true;
-                // Removed Marca and Modelo matching
-
-                // All provided criteria must match
-                return matchNombre && matchCodigo; // Only original two criteria
+                return matchNombre && matchCodigo;
             });
 
             displayResults(results);
@@ -391,11 +404,15 @@
             const table = document.createElement('table');
             table.className = 'results-table';
 
-            // Create table header
+            // Create table header based on login status
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
-            // Reverted table headers to original set
-            ['Nombre de equipo', 'Codigo sap', 'Color', 'Precio de venta al sub'].forEach(text => {
+            const headersToShow = ["Nombre de equipo", "Codigo sap", "Color", "Precio Público (IVA incluido)"];
+            if (isLoggedIn) {
+                headersToShow.splice(3, 0, "Precio de venta al sub"); // Insert "Precio de venta al sub" at index 3
+            }
+
+            headersToShow.forEach(text => {
                 const th = document.createElement('th');
                 th.textContent = text;
                 headerRow.appendChild(th);
@@ -407,12 +424,16 @@
             const tbody = document.createElement('tbody');
             results.forEach(product => {
                 const row = document.createElement('tr');
-                row.innerHTML = `
+                let rowHtml = `
                     <td>${product["Nombre de equipo"] || 'N/A'}</td>
                     <td>${product["Codigo sap"] || 'N/A'}</td>
                     <td>${product["Color"] || 'N/A'}</td>
-                    <td class="font-semibold text-indigo-700">${product["Precio de venta al sub"] || 'N/A'}</td>
                 `;
+                if (isLoggedIn) {
+                    rowHtml += `<td>${product["Precio de venta al sub"] || 'N/A'}</td>`;
+                }
+                rowHtml += `<td class="font-semibold text-indigo-700">${product["Precio Público (IVA incluido)"] || 'N/A'}</td>`;
+                row.innerHTML = rowHtml;
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
@@ -421,16 +442,44 @@
             showMessage(`Se encontraron ${results.length} resultados.`, 'success');
         }
 
-        // Event listener for admin button click
-        adminButton.addEventListener('click', () => {
-            // Toggle the visibility of the upload section
-            uploadSection.classList.toggle('hidden');
-            if (!uploadSection.classList.contains('hidden')) {
-                showMessage('Sección de carga de archivo visible.', 'info');
+        // Event listener for admin access button click
+        adminAccessButton.addEventListener('click', () => {
+            const enteredPassword = adminPasswordInput.value;
+            if (enteredPassword === ADMIN_PASSWORD) {
+                isLoggedIn = true;
+                adminAccessSection.classList.add('hidden'); // Hide password section
+                uploadSection.classList.remove('hidden');    // Show upload section
+                adminMessage.textContent = ''; // Clear any previous message
+                showMessage('Acceso de administrador concedido. Ahora puedes ver todas las columnas y cargar archivos.', 'success');
+                // Re-display results with all columns if any search was performed
+                // This ensures the table updates if a search was already made before logging in
+                const currentNombreEquipoQuery = nombreEquipoInput.value.toLowerCase().trim();
+                const currentCodigoSapQuery = codigoSapInput.value.toLowerCase().trim();
+                if (currentNombreEquipoQuery || currentCodigoSapQuery) {
+                    const filteredResults = productsData.filter(product => {
+                        const matchNombre = currentNombreEquipoQuery ? product["Nombre de equipo"]?.toLowerCase().includes(currentNombreEquipoQuery) : true;
+                        const matchCodigo = currentCodigoSapQuery ? product["Codigo sap"]?.toLowerCase().includes(currentCodigoSapQuery) : true;
+                        return matchNombre && matchCodigo;
+                    });
+                    displayResults(filteredResults);
+                } else if (productsData.length > 0) { // If data is loaded but no search, show all data (or initial message)
+                    displayResults([]); // Clear results if no search criteria, or show initial message
+                }
+
             } else {
-                hideMessageBox();
+                adminMessage.textContent = 'Contraseña incorrecta. Inténtalo de nuevo.';
+                showMessage('Contraseña incorrecta.', 'error');
             }
+            adminPasswordInput.value = ''; // Clear password input
         });
+
+        // Event listener for the "Administrador" button at the bottom to show the login section
+        showAdminLoginButton.addEventListener('click', () => {
+            adminAccessSection.classList.remove('hidden'); // Show the password input section
+            adminPasswordInput.focus(); // Focus on the password input for convenience
+            hideMessageBox(); // Hide general messages
+        });
+
 
         // Initial state message and automatic CSV load
         document.addEventListener('DOMContentLoaded', () => {
@@ -440,4 +489,3 @@
     </script>
 </body>
 </html>
-
